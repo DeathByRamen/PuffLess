@@ -3,25 +3,23 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { isOnboarded } from './src/services/storage';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import TodayScreen from './src/screens/TodayScreen';
 import ProgressScreen from './src/screens/ProgressScreen';
 import PlanScreen from './src/screens/PlanScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import { Colors } from './src/constants/theme';
 
 const Tab = createBottomTabNavigator();
 
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Today: '☀️',
-    Progress: '📊',
-    Plan: '📋',
-    Settings: '⚙️',
-  };
-  return <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.5 }}>{icons[name] ?? '📱'}</Text>;
-}
+const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
+  Today: { focused: 'sunny', unfocused: 'sunny-outline' },
+  Progress: { focused: 'stats-chart', unfocused: 'stats-chart-outline' },
+  Plan: { focused: 'clipboard', unfocused: 'clipboard-outline' },
+  Settings: { focused: 'settings', unfocused: 'settings-outline' },
+};
 
 export default function App() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
@@ -47,13 +45,25 @@ export default function App() {
         <StatusBar style="dark" />
         <Tab.Navigator
           screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
-            tabBarActiveTintColor: '#0d9488',
-            tabBarInactiveTintColor: '#9ca3af',
-            tabBarStyle: { paddingBottom: 8, paddingTop: 8, height: 60 },
-            headerStyle: { backgroundColor: '#f3f4f6' },
+            tabBarIcon: ({ focused, color, size }) => {
+              const icons = TAB_ICONS[route.name];
+              const iconName = focused ? icons.focused : icons.unfocused;
+              return <Ionicons name={iconName} size={22} color={color} />;
+            },
+            tabBarActiveTintColor: Colors.teal,
+            tabBarInactiveTintColor: Colors.textMuted,
+            tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: -2 },
+            tabBarStyle: {
+              backgroundColor: Colors.white,
+              borderTopColor: Colors.borderLight,
+              borderTopWidth: 1,
+              paddingBottom: 8,
+              paddingTop: 8,
+              height: 64,
+            },
+            headerStyle: { backgroundColor: Colors.bg, elevation: 0, shadowOpacity: 0 },
             headerShadowVisible: false,
-            headerTitleStyle: { fontWeight: '700', fontSize: 20 },
+            headerTitleStyle: { fontWeight: '700', fontSize: 22, color: Colors.text, letterSpacing: -0.3 },
           })}
         >
           <Tab.Screen name="Today" component={TodayScreen} />

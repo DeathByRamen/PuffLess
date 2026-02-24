@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { Colors, Spacing, Radius } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Radius, Shadows, Type } from '../constants/theme';
 import { QUIT_METHODS, NRT_TYPES } from '../constants/data';
 import { useAppData } from '../hooks/useAppData';
 import { getCurrentWeek, getPlanProgress, getDaysRemaining } from '../services/planGenerator';
 import { NRTType } from '../models/types';
 import { addNRTEntry } from '../services/storage';
+
+const METHOD_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Gradual Reduction': 'trending-down-outline', 'Trigger Tracking': 'bulb-outline',
+  'Cold Turkey': 'hand-left-outline', 'NRT Tracking': 'medkit-outline', 'Gamification': 'trophy-outline',
+};
 
 export default function PlanScreen() {
   const { plan, profile, nrtEntries, reload } = useAppData();
@@ -14,7 +20,7 @@ export default function PlanScreen() {
   if (!plan || !profile) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📋</Text>
+        <Ionicons name="clipboard-outline" size={48} color={Colors.textMuted} />
         <Text style={styles.emptyTitle}>No Plan Yet</Text>
         <Text style={styles.emptyText}>Complete onboarding to create your quit plan</Text>
       </View>
@@ -28,15 +34,15 @@ export default function PlanScreen() {
   const maxTarget = Math.max(1, ...plan.weeklyTargets);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {/* Overview */}
-      <View style={styles.card}>
+      <View style={[styles.card, Shadows.md]}>
         <View style={styles.overviewRow}>
           <View>
             <Text style={styles.weekText}>Week {week + 1} of {totalWeeks}</Text>
             <Text style={styles.remainingText}>{remaining} days remaining</Text>
           </View>
-          <View style={styles.progressCircle}>
+          <View style={styles.progressRing}>
             <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
           </View>
         </View>
@@ -47,24 +53,31 @@ export default function PlanScreen() {
             <Text style={styles.goalValue}>{plan.weeklyTargets[Math.min(week, plan.weeklyTargets.length - 1)]} puffs/day</Text>
           </View>
           {plan.nicotineStepDown.length > 0 && (
-            <View style={styles.goalRight}>
-              <Text style={styles.goalLabel}>Nicotine target</Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.goalLabel}>Nicotine</Text>
               <Text style={styles.goalValue}>{Math.round(plan.nicotineStepDown[Math.min(week, plan.nicotineStepDown.length - 1)])}mg</Text>
             </View>
           )}
         </View>
-        <Text style={styles.targetDate}>🏁 Target: {new Date(plan.targetEndDate).toLocaleDateString()}</Text>
+        <View style={styles.targetRow}>
+          <Ionicons name="flag" size={16} color={Colors.teal} />
+          <Text style={styles.targetText}>
+            Target: {new Date(plan.targetEndDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+          </Text>
+        </View>
       </View>
 
-      {/* Active Methods */}
-      <View style={styles.card}>
+      {/* Methods */}
+      <View style={[styles.card, Shadows.sm]}>
         <Text style={styles.cardTitle}>Active Methods</Text>
         {profile.selectedMethods.map((method) => {
           const info = QUIT_METHODS.find((m) => m.method === method);
           return (
             <View key={method} style={styles.methodItem}>
-              <Text style={styles.methodIcon}>{info?.icon ?? '✅'}</Text>
-              <View style={styles.methodText}>
+              <View style={styles.methodIconWrap}>
+                <Ionicons name={METHOD_ICONS[method]} size={20} color={Colors.teal} />
+              </View>
+              <View style={styles.methodTextWrap}>
                 <Text style={styles.methodName}>{method}</Text>
                 <Text style={styles.methodDesc}>{info?.description}</Text>
               </View>
@@ -73,39 +86,40 @@ export default function PlanScreen() {
         })}
       </View>
 
-      {/* Step-Down Schedule */}
-      <View style={styles.card}>
+      {/* Step-Down */}
+      <View style={[styles.card, Shadows.sm]}>
         <Text style={styles.cardTitle}>Step-Down Schedule</Text>
         <View style={styles.scheduleChart}>
           {plan.weeklyTargets.map((target, i) => (
-            <View key={i} style={styles.scheduleBar}>
-              <View style={[styles.scheduleBarFill, {
-                height: `${(target / maxTarget) * 100}%`,
+            <View key={i} style={styles.scheduleCol}>
+              <View style={[styles.scheduleBar, {
+                height: `${Math.max(2, (target / maxTarget) * 100)}%`,
                 backgroundColor: i === week ? Colors.teal : Colors.tealLight,
+                borderRadius: 3,
               }]} />
-              <Text style={styles.scheduleLabel}>{i + 1}</Text>
             </View>
           ))}
         </View>
-        <Text style={styles.scheduleNote}>Week numbers</Text>
       </View>
 
-      {/* NRT Section */}
+      {/* NRT */}
       {profile.selectedMethods.includes('NRT Tracking') && (
-        <View style={styles.card}>
+        <View style={[styles.card, Shadows.sm]}>
           <View style={styles.nrtHeader}>
             <Text style={styles.cardTitle}>NRT Log</Text>
-            <TouchableOpacity onPress={() => setShowNRTModal(true)}>
-              <Text style={styles.addButton}>+ Add</Text>
+            <TouchableOpacity onPress={() => setShowNRTModal(true)} style={styles.addBtn}>
+              <Ionicons name="add" size={18} color={Colors.teal} />
+              <Text style={styles.addBtnText}>Add</Text>
             </TouchableOpacity>
           </View>
           {nrtEntries.length === 0 ? (
-            <Text style={styles.emptySmall}>No NRT entries yet</Text>
+            <Text style={styles.emptySmall}>No entries yet</Text>
           ) : (
             nrtEntries.slice(0, 5).map((entry) => (
               <View key={entry.id} style={styles.nrtRow}>
-                <Text>{NRT_TYPES.find((t) => t.type === entry.type)?.icon} {entry.type}</Text>
-                <Text style={styles.nrtDosage}>{entry.dosageMg}mg</Text>
+                <Ionicons name="medkit-outline" size={18} color={Colors.textSecondary} />
+                <Text style={styles.nrtType}>{entry.type}</Text>
+                <Text style={styles.nrtDose}>{entry.dosageMg}mg</Text>
                 <Text style={styles.nrtDate}>{new Date(entry.date).toLocaleDateString()}</Text>
               </View>
             ))
@@ -126,110 +140,91 @@ function NRTModal({ onDismiss }: { onDismiss: () => void }) {
   const [notes, setNotes] = useState('');
 
   const handleSave = async () => {
-    await addNRTEntry({
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      type,
-      dosageMg: dosage,
-      notes,
-    });
+    await addNRTEntry({ id: Date.now().toString(), date: new Date().toISOString(), type, dosageMg: dosage, notes });
     onDismiss();
   };
 
   return (
-    <View style={nrtStyles.container}>
-      <View style={nrtStyles.header}>
-        <TouchableOpacity onPress={onDismiss}><Text style={nrtStyles.cancel}>Cancel</Text></TouchableOpacity>
-        <Text style={nrtStyles.title}>Log NRT</Text>
-        <TouchableOpacity onPress={handleSave}><Text style={nrtStyles.save}>Save</Text></TouchableOpacity>
+    <View style={nrt.container}>
+      <View style={nrt.header}>
+        <TouchableOpacity onPress={onDismiss}><Ionicons name="close" size={24} color={Colors.textSecondary} /></TouchableOpacity>
+        <Text style={nrt.title}>Log NRT</Text>
+        <TouchableOpacity onPress={handleSave}><Text style={nrt.save}>Save</Text></TouchableOpacity>
       </View>
-      <View style={nrtStyles.body}>
-        <Text style={nrtStyles.label}>Type</Text>
-        <View style={nrtStyles.typeRow}>
+      <View style={nrt.body}>
+        <Text style={nrt.label}>TYPE</Text>
+        <View style={nrt.typeRow}>
           {NRT_TYPES.map(({ type: t, icon }) => (
-            <TouchableOpacity
-              key={t}
-              style={[nrtStyles.typeChip, type === t && nrtStyles.typeChipActive]}
-              onPress={() => setType(t)}
-            >
+            <TouchableOpacity key={t} style={[nrt.typeChip, type === t && nrt.typeActive]} onPress={() => setType(t)}>
               <Text>{icon} {t}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={nrtStyles.label}>Dosage: {dosage}mg</Text>
-        <View style={nrtStyles.dosageRow}>
-          <TouchableOpacity style={nrtStyles.dosageBtn} onPress={() => setDosage(Math.max(1, dosage - 1))}>
-            <Text style={nrtStyles.dosageBtnText}>−</Text>
+        <Text style={nrt.label}>DOSAGE</Text>
+        <View style={nrt.doseRow}>
+          <TouchableOpacity style={nrt.doseBtn} onPress={() => setDosage(Math.max(1, dosage - 1))}>
+            <Ionicons name="remove" size={22} color={Colors.teal} />
           </TouchableOpacity>
-          <Text style={nrtStyles.dosageValue}>{dosage}mg</Text>
-          <TouchableOpacity style={nrtStyles.dosageBtn} onPress={() => setDosage(dosage + 1)}>
-            <Text style={nrtStyles.dosageBtnText}>+</Text>
+          <Text style={nrt.doseVal}>{dosage}mg</Text>
+          <TouchableOpacity style={nrt.doseBtn} onPress={() => setDosage(dosage + 1)}>
+            <Ionicons name="add" size={22} color={Colors.teal} />
           </TouchableOpacity>
         </View>
-        <TextInput
-          style={nrtStyles.input}
-          placeholder="Notes (optional)"
-          placeholderTextColor={Colors.textMuted}
-          value={notes}
-          onChangeText={setNotes}
-        />
+        <TextInput style={nrt.input} placeholder="Notes (optional)" placeholderTextColor={Colors.textMuted} value={notes} onChangeText={setNotes} />
       </View>
     </View>
   );
 }
 
-const nrtStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderColor: Colors.border },
-  cancel: { fontSize: 16, color: Colors.textSecondary },
-  title: { fontSize: 17, fontWeight: '600' },
-  save: { fontSize: 16, color: Colors.teal, fontWeight: '600' },
-  body: { padding: Spacing.xl },
-  label: { fontSize: 15, fontWeight: '600', color: Colors.text, marginTop: Spacing.xl, marginBottom: Spacing.md },
+const nrt = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1, borderColor: Colors.divider },
+  title: { ...Type.h3 },
+  save: { fontSize: 16, color: Colors.teal, fontWeight: '700' },
+  body: { padding: Spacing['2xl'] },
+  label: { ...Type.caption, textTransform: 'uppercase', letterSpacing: 1.5, marginTop: Spacing['3xl'], marginBottom: Spacing.md },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  typeChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, borderRadius: Radius.md, backgroundColor: Colors.card, borderWidth: 1.5, borderColor: 'transparent' },
-  typeChipActive: { borderColor: Colors.teal, backgroundColor: Colors.tealLight },
-  dosageRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xxl },
-  dosageBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.tealLight, justifyContent: 'center', alignItems: 'center' },
-  dosageBtnText: { fontSize: 24, fontWeight: '700', color: Colors.teal },
-  dosageValue: { fontSize: 32, fontWeight: '800', color: Colors.text },
-  input: { borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.xl, fontSize: 14, color: Colors.text },
+  typeChip: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, borderRadius: Radius.full, backgroundColor: Colors.bgCard, borderWidth: 1.5, borderColor: Colors.border },
+  typeActive: { borderColor: Colors.teal, backgroundColor: Colors.tealMuted },
+  doseRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing['3xl'] },
+  doseBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.tealMuted, justifyContent: 'center', alignItems: 'center' },
+  doseVal: { ...Type.number, fontSize: 36 },
+  input: { backgroundColor: Colors.bgInput, borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing['2xl'], fontSize: 15, color: Colors.text },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.lg, gap: Spacing.lg, paddingBottom: 100 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
-  emptyText: { fontSize: 14, color: Colors.textSecondary },
-  card: { backgroundColor: Colors.card, borderRadius: Radius.lg, padding: Spacing.lg },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: Spacing.md },
+  container: { flex: 1, backgroundColor: Colors.bg },
+  content: { padding: Spacing.xl, gap: Spacing.lg, paddingBottom: 100 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg, gap: Spacing.md },
+  emptyTitle: { ...Type.h3 },
+  emptyText: { ...Type.bodySm },
+  card: { backgroundColor: Colors.bgCard, borderRadius: Radius.xl, padding: Spacing.xl },
+  cardTitle: { ...Type.label, marginBottom: Spacing.lg },
   overviewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  weekText: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  remainingText: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  progressCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.tealLight, justifyContent: 'center', alignItems: 'center' },
-  progressText: { fontSize: 14, fontWeight: '700', color: Colors.teal },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: Spacing.md },
+  weekText: { ...Type.h3 },
+  remainingText: { ...Type.bodySm, marginTop: 2 },
+  progressRing: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.tealMuted, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: Colors.teal },
+  progressText: { ...Type.label, color: Colors.teal, fontSize: 14 },
+  divider: { height: 1, backgroundColor: Colors.divider, marginVertical: Spacing.lg },
   goalsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  goalRight: { alignItems: 'flex-end' },
-  goalLabel: { fontSize: 12, color: Colors.textSecondary },
-  goalValue: { fontSize: 17, fontWeight: '700', color: Colors.text },
-  targetDate: { fontSize: 14, color: Colors.textSecondary, marginTop: Spacing.md },
-  methodItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, backgroundColor: Colors.cardAlt, borderRadius: Radius.md, marginBottom: Spacing.sm },
-  methodIcon: { fontSize: 24, marginRight: Spacing.md },
-  methodText: { flex: 1 },
-  methodName: { fontSize: 14, fontWeight: '600', color: Colors.text },
-  methodDesc: { fontSize: 12, color: Colors.textSecondary },
-  scheduleChart: { flexDirection: 'row', height: 120, gap: 2, alignItems: 'flex-end', marginTop: Spacing.sm },
-  scheduleBar: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
-  scheduleBarFill: { width: '80%', borderRadius: 3, minHeight: 2 },
-  scheduleLabel: { fontSize: 8, color: Colors.textSecondary, marginTop: 2 },
-  scheduleNote: { fontSize: 11, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.sm },
-  nrtHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  addButton: { fontSize: 14, color: Colors.teal, fontWeight: '600' },
-  emptySmall: { fontSize: 13, color: Colors.textSecondary },
-  nrtRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.sm },
-  nrtDosage: { fontWeight: '700' },
-  nrtDate: { fontSize: 12, color: Colors.textSecondary },
+  goalLabel: { ...Type.caption },
+  goalValue: { ...Type.h3, fontSize: 18, marginTop: 2 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.lg },
+  targetText: { ...Type.bodySm, color: Colors.teal },
+  methodItem: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, backgroundColor: Colors.bgInput, borderRadius: Radius.lg, marginBottom: Spacing.sm },
+  methodIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.tealMuted, justifyContent: 'center', alignItems: 'center', marginRight: Spacing.md },
+  methodTextWrap: { flex: 1 },
+  methodName: { ...Type.label, fontSize: 14 },
+  methodDesc: { ...Type.caption, marginTop: 2 },
+  scheduleChart: { flexDirection: 'row', height: 120, gap: 2, alignItems: 'flex-end' },
+  scheduleCol: { flex: 1, height: '100%', justifyContent: 'flex-end' },
+  scheduleBar: { width: '80%', alignSelf: 'center', minHeight: 2 },
+  nrtHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.lg },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addBtnText: { ...Type.label, color: Colors.teal, fontSize: 14 },
+  emptySmall: { ...Type.bodySm },
+  nrtRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.sm },
+  nrtType: { ...Type.bodyMedium, flex: 1 },
+  nrtDose: { ...Type.label },
+  nrtDate: { ...Type.caption },
 });

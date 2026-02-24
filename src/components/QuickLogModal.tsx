@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { Colors, Spacing, Radius } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Radius, Shadows, Type } from '../constants/theme';
 import { MOOD_EMOJIS } from '../constants/data';
 import { upsertTodayLog } from '../services/storage';
 
@@ -23,48 +24,57 @@ export default function QuickLogModal({ currentCount, goal, onDismiss }: Props) 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onDismiss}>
-          <Text style={styles.cancel}>Cancel</Text>
+        <TouchableOpacity onPress={onDismiss} hitSlop={12}>
+          <Ionicons name="close" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
         <Text style={styles.title}>Log Puffs</Text>
-        <View style={{ width: 60 }} />
+        <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.subLabel}>Today so far</Text>
+        <Text style={styles.label}>Today so far</Text>
         <Text style={styles.currentCount}>{currentCount}</Text>
-        <Text style={styles.goalText}>Goal: {goal} puffs</Text>
-
-        <Text style={[styles.subLabel, { marginTop: Spacing.xxl }]}>Puffs to add</Text>
-        <View style={styles.stepperRow}>
-          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(Math.max(1, puffsToAdd - 1))}>
-            <Text style={styles.stepperText}>−</Text>
-          </TouchableOpacity>
-          <Text style={styles.stepperValue}>{puffsToAdd}</Text>
-          <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(puffsToAdd + 1)}>
-            <Text style={styles.stepperText}>+</Text>
-          </TouchableOpacity>
+        <View style={styles.goalBadge}>
+          <Ionicons name="flag-outline" size={14} color={Colors.teal} />
+          <Text style={styles.goalText}>Goal: {goal} puffs</Text>
         </View>
 
-        <View style={styles.quickButtons}>
-          {[1, 5, 10, 20].map((n) => (
-            <TouchableOpacity
-              key={n}
-              style={[styles.quickBtn, puffsToAdd === n && styles.quickBtnActive]}
-              onPress={() => setPuffsToAdd(n)}
-            >
-              <Text style={[styles.quickBtnText, puffsToAdd === n && styles.quickBtnTextActive]}>+{n}</Text>
+        <View style={styles.section}>
+          <Text style={styles.label}>Puffs to add</Text>
+          <View style={styles.stepperRow}>
+            <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(Math.max(1, puffsToAdd - 1))} activeOpacity={0.7}>
+              <Ionicons name="remove" size={24} color={Colors.teal} />
             </TouchableOpacity>
-          ))}
+            <Text style={styles.stepperValue}>{puffsToAdd}</Text>
+            <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(puffsToAdd + 1)} activeOpacity={0.7}>
+              <Ionicons name="add" size={24} color={Colors.teal} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.quickRow}>
+            {[1, 5, 10, 20].map((n) => (
+              <TouchableOpacity
+                key={n}
+                style={[styles.quickChip, puffsToAdd === n && styles.quickChipActive]}
+                onPress={() => setPuffsToAdd(n)}
+              >
+                <Text style={[styles.quickChipText, puffsToAdd === n && styles.quickChipTextActive]}>+{n}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <Text style={[styles.subLabel, { marginTop: Spacing.xxl }]}>How are you feeling?</Text>
-        <View style={styles.moodRow}>
-          {MOOD_EMOJIS.map((emoji, i) => (
-            <TouchableOpacity key={i} onPress={() => setMood(i + 1)}>
-              <Text style={[styles.moodEmoji, { opacity: mood === i + 1 ? 1 : 0.3, fontSize: mood === i + 1 ? 36 : 28 }]}>{emoji}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.section}>
+          <Text style={styles.label}>How are you feeling?</Text>
+          <View style={styles.moodRow}>
+            {MOOD_EMOJIS.map((emoji, i) => (
+              <TouchableOpacity key={i} onPress={() => setMood(i + 1)} activeOpacity={0.7}>
+                <View style={[styles.moodCircle, mood === i + 1 && styles.moodCircleActive]}>
+                  <Text style={{ fontSize: mood === i + 1 ? 32 : 24 }}>{emoji}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <TextInput
@@ -77,34 +87,60 @@ export default function QuickLogModal({ currentCount, goal, onDismiss }: Props) 
         />
       </View>
 
-      <TouchableOpacity style={styles.logButton} onPress={handleLog}>
-        <Text style={styles.logButtonText}>Log {puffsToAdd} Puff{puffsToAdd === 1 ? '' : 's'}</Text>
-      </TouchableOpacity>
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.logButton} onPress={handleLog} activeOpacity={0.85}>
+          <Ionicons name="add-circle" size={20} color={Colors.white} />
+          <Text style={styles.logButtonText}>Log {puffsToAdd} Puff{puffsToAdd === 1 ? '' : 's'}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: 1, borderColor: Colors.border },
-  cancel: { fontSize: 16, color: Colors.teal },
-  title: { fontSize: 17, fontWeight: '600', color: Colors.text },
-  body: { flex: 1, padding: Spacing.xl, alignItems: 'center' },
-  subLabel: { fontSize: 14, color: Colors.textSecondary },
-  currentCount: { fontSize: 56, fontWeight: '800', color: Colors.text },
-  goalText: { fontSize: 13, color: Colors.textSecondary },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xxl, marginTop: Spacing.md },
-  stepperBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.tealLight, justifyContent: 'center', alignItems: 'center' },
-  stepperText: { fontSize: 28, fontWeight: '700', color: Colors.teal },
-  stepperValue: { fontSize: 48, fontWeight: '800', color: Colors.text, minWidth: 60, textAlign: 'center' },
-  quickButtons: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.lg },
-  quickBtn: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border },
-  quickBtnActive: { backgroundColor: Colors.teal, borderColor: Colors.teal },
-  quickBtnText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  quickBtnTextActive: { color: Colors.white },
+  container: { flex: 1, backgroundColor: Colors.bg },
+  header: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: Spacing.xl, borderBottomWidth: 1, borderColor: Colors.divider,
+  },
+  title: { ...Type.h3 },
+  body: { flex: 1, padding: Spacing['2xl'], alignItems: 'center' },
+  label: { ...Type.caption, textTransform: 'uppercase', letterSpacing: 1 },
+  currentCount: { ...Type.numberLg, marginTop: Spacing.xs },
+  goalBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+    backgroundColor: Colors.tealMuted, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
+    borderRadius: Radius.full, marginTop: Spacing.sm,
+  },
+  goalText: { ...Type.caption, color: Colors.teal, fontWeight: '600' },
+  section: { width: '100%', marginTop: Spacing['3xl'], alignItems: 'center' },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing['3xl'], marginTop: Spacing.md },
+  stepperBtn: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: Colors.tealMuted, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: Colors.tealLight,
+  },
+  stepperValue: { ...Type.number, minWidth: 70, textAlign: 'center' },
+  quickRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
+  quickChip: {
+    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.full, backgroundColor: Colors.bgInput,
+  },
+  quickChipActive: { backgroundColor: Colors.teal },
+  quickChipText: { ...Type.label, color: Colors.textSecondary },
+  quickChipTextActive: { color: Colors.white },
   moodRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.md },
-  moodEmoji: {},
-  input: { width: '100%', borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md, padding: Spacing.md, marginTop: Spacing.xl, fontSize: 14, color: Colors.text, minHeight: 60, textAlignVertical: 'top' },
-  logButton: { backgroundColor: Colors.teal, margin: Spacing.xl, paddingVertical: Spacing.lg, borderRadius: Radius.lg, alignItems: 'center' },
+  moodCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
+  moodCircleActive: { backgroundColor: Colors.tealMuted, ...Shadows.sm },
+  input: {
+    width: '100%', backgroundColor: Colors.bgInput,
+    borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing['2xl'],
+    fontSize: 15, color: Colors.text, minHeight: 60, textAlignVertical: 'top',
+  },
+  footer: { padding: Spacing.xl },
+  logButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.teal, paddingVertical: 16, borderRadius: Radius.xl, ...Shadows.md,
+  },
   logButtonText: { fontSize: 17, fontWeight: '700', color: Colors.white },
 });
