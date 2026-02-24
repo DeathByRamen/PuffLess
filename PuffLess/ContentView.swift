@@ -1,28 +1,61 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+    @Query private var profiles: [UserProfile]
+    @State private var hasCompletedOnboarding = false
+    @State private var selectedTab = 0
+
+    private var isOnboarded: Bool {
+        hasCompletedOnboarding || !profiles.isEmpty
+    }
+
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "wind")
-                    .font(.system(size: 64))
-                    .foregroundStyle(.teal)
+        if isOnboarded {
+            TabView(selection: $selectedTab) {
+                TodayView()
+                    .tabItem {
+                        Label("Today", systemImage: "sun.max.fill")
+                    }
+                    .tag(0)
 
-                Text("PuffLess")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                ProgressTabView()
+                    .tabItem {
+                        Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    .tag(1)
 
-                Text("Track your progress.\nBreath by breath.")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                PlanView()
+                    .tabItem {
+                        Label("Plan", systemImage: "list.clipboard")
+                    }
+                    .tag(2)
+
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+                    .tag(3)
             }
-            .padding()
-            .navigationTitle("PuffLess")
+            .tint(.teal)
+        } else {
+            OnboardingView {
+                withAnimation {
+                    hasCompletedOnboarding = true
+                }
+            }
         }
     }
 }
 
 #Preview {
     ContentView()
+        .modelContainer(for: [
+            UserProfile.self,
+            DailyLog.self,
+            Craving.self,
+            NRTEntry.self,
+            Milestone.self,
+            QuitPlan.self,
+        ], inMemory: true)
 }
