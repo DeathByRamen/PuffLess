@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,11 @@ import { Colors } from './src/constants/theme';
 
 const Tab = createBottomTabNavigator();
 
+const DarkNavTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: Colors.bg, card: Colors.bg, text: Colors.text, border: Colors.border, primary: Colors.mint },
+};
+
 const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
   Today: { focused: 'sunny', unfocused: 'sunny-outline' },
   Progress: { focused: 'stats-chart', unfocused: 'stats-chart-outline' },
@@ -24,16 +29,14 @@ const TAB_ICONS: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfoc
 export default function App() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    isOnboarded().then(setOnboarded);
-  }, []);
+  useEffect(() => { isOnboarded().then(setOnboarded); }, []);
 
   if (onboarded === null) return null;
 
   if (!onboarded) {
     return (
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <OnboardingScreen onComplete={() => setOnboarded(true)} />
       </SafeAreaProvider>
     );
@@ -41,25 +44,22 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
+      <NavigationContainer theme={DarkNavTheme}>
+        <StatusBar style="light" />
         <Tab.Navigator
           screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
+            tabBarIcon: ({ focused, color }) => {
               const icons = TAB_ICONS[route.name];
-              const iconName = focused ? icons.focused : icons.unfocused;
-              return <Ionicons name={iconName} size={22} color={color} />;
+              return <Ionicons name={focused ? icons.focused : icons.unfocused} size={22} color={color} />;
             },
-            tabBarActiveTintColor: Colors.teal,
-            tabBarInactiveTintColor: Colors.textMuted,
+            tabBarActiveTintColor: Colors.mint,
+            tabBarInactiveTintColor: Colors.textDim,
             tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginTop: -2 },
             tabBarStyle: {
-              backgroundColor: Colors.white,
-              borderTopColor: Colors.borderLight,
+              backgroundColor: Colors.bgCard,
+              borderTopColor: Colors.border,
               borderTopWidth: 1,
-              paddingBottom: 8,
-              paddingTop: 8,
-              height: 64,
+              paddingBottom: 8, paddingTop: 8, height: 64,
             },
             headerStyle: { backgroundColor: Colors.bg, elevation: 0, shadowOpacity: 0 },
             headerShadowVisible: false,
@@ -69,7 +69,11 @@ export default function App() {
           <Tab.Screen name="Today" component={TodayScreen} />
           <Tab.Screen name="Progress" component={ProgressScreen} />
           <Tab.Screen name="Plan" component={PlanScreen} options={{ title: 'My Plan' }} />
-          <Tab.Screen name="Settings" component={SettingsScreen} />
+          <Tab.Screen
+          name="Settings"
+          component={SettingsScreen}
+          initialParams={{ onReset: () => setOnboarded(false) }}
+        />
         </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

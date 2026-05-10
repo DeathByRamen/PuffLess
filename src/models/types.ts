@@ -1,6 +1,6 @@
 export type VapeDeviceType = 'Disposable' | 'Pod System' | 'Mod/Tank' | 'Other';
 
-export type QuitMethod = 'Gradual Reduction' | 'Trigger Tracking' | 'Cold Turkey' | 'NRT Tracking' | 'Gamification';
+export type QuitMethod = 'Gradual Reduction' | 'Trigger Tracking' | 'Cold Turkey' | 'NRT Tracking';
 
 export type NotificationPreference = 'Encourage me often' | 'Just the essentials' | 'Only milestones';
 

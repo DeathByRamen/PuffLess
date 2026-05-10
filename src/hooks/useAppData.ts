@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { UserProfile, DailyLog, Craving, QuitPlan, NRTEntry } from '../models/types';
 import * as Storage from '../services/storage';
 import { getTodaysGoal } from '../services/planGenerator';
+import { getLocalDateString } from '../utils/date';
 
 export function useAppData() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -31,7 +32,7 @@ export function useAppData() {
     reload();
   }, [reload]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const todayLog = logs.find((l) => l.date === todayStr) ?? null;
   const todayCravings = cravings.filter((c) => c.timestamp.startsWith(todayStr));
   const todaysGoal = plan ? getTodaysGoal(plan) : 0;
@@ -44,7 +45,7 @@ export function useAppData() {
 
     for (const log of sorted) {
       const logDate = log.date;
-      const checkStr = checkDate.toISOString().split('T')[0];
+      const checkStr = getLocalDateString(checkDate);
       if (logDate === checkStr && log.goalMet) {
         count++;
         checkDate = new Date(checkDate.getTime() - 86400000);

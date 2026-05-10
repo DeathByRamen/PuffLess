@@ -1,177 +1,146 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadows, Type } from '../constants/theme';
 import { CRAVING_TRIGGERS, CRAVING_ACTIONS } from '../constants/data';
 import { CravingTrigger, CravingAction } from '../models/types';
 import { addCraving } from '../services/storage';
 
-interface Props {
-  onDismiss: () => void;
-}
+const INTENSITIES = [1, 2, 3, 4, 5];
 
-export default function CravingLogModal({ onDismiss }: Props) {
+export default function CravingLogModal({ onDismiss }: { onDismiss: () => void }) {
   const [intensity, setIntensity] = useState(3);
-  const [trigger, setTrigger] = useState<CravingTrigger>('Habit');
-  const [action, setAction] = useState<CravingAction>('Resisted');
-  const [notes, setNotes] = useState('');
-
-  const labels = ['Mild', 'Moderate', 'Strong', 'Intense', 'Overwhelming'];
-  const colors = [Colors.success, Colors.teal, Colors.amber, Colors.coral, Colors.danger];
-  const suggestion = CRAVING_TRIGGERS.find((t) => t.trigger === trigger)?.suggestion ?? '';
-
-  const TRIGGER_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-    'Stress': 'thunderstorm-outline', 'Boredom': 'time-outline', 'Social': 'people-outline',
-    'Habit': 'repeat-outline', 'After Meal': 'restaurant-outline', 'Anxiety': 'alert-circle-outline',
-    'Celebration': 'sparkles-outline', 'Other': 'ellipsis-horizontal-circle-outline',
-  };
-
-  const ACTION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-    'Vaped': 'cloud-outline', 'Resisted': 'shield-checkmark-outline',
-    'Used NRT': 'medkit-outline', 'Breathing Exercise': 'leaf-outline', 'Other': 'ellipsis-horizontal-outline',
-  };
+  const [trigger, setTrigger] = useState<CravingTrigger | null>(null);
+  const [action, setAction] = useState<CravingAction | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const handleSave = async () => {
-    await addCraving({
-      id: Date.now().toString(), timestamp: new Date().toISOString(),
-      intensity, trigger, action, notes,
-    });
-    onDismiss();
+    if (!trigger || !action) return;
+    await addCraving({ id: Date.now().toString(), timestamp: new Date().toISOString(), intensity, trigger, action, notes: '' });
+    setSaved(true);
+    setTimeout(onDismiss, 400);
   };
 
+  const complete = trigger && action;
+  const triggerData = trigger ? CRAVING_TRIGGERS.find(t => t.trigger === trigger) : null;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onDismiss} hitSlop={12}>
-          <Ionicons name="close" size={24} color={Colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Log Craving</Text>
-        <View style={{ width: 24 }} />
+    <SafeAreaView style={st.safe}>
+      <View style={st.header}>
+        <TouchableOpacity onPress={onDismiss}><Ionicons name="close" size={28} color={Colors.textMuted} /></TouchableOpacity>
+        <Text style={st.title}>Log Craving</Text>
+        <View style={{ width: 28 }} />
       </View>
-
-      <ScrollView style={styles.body} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text style={styles.sectionLabel}>INTENSITY</Text>
-        <Text style={[styles.intensityText, { color: colors[intensity - 1] }]}>{labels[intensity - 1]}</Text>
-        <View style={styles.dotsRow}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <TouchableOpacity key={n} onPress={() => setIntensity(n)} activeOpacity={0.7}>
-              <View style={[styles.intensityDot, {
-                backgroundColor: n <= intensity ? colors[intensity - 1] : Colors.borderLight,
-                width: n === intensity ? 32 : 24,
-                height: n === intensity ? 32 : 24,
-                borderRadius: n === intensity ? 16 : 12,
-              }]} />
+      <ScrollView style={st.scroll} contentContainerStyle={st.body} showsVerticalScrollIndicator={false}>
+        {/* Intensity */}
+        <Text style={st.sectionTitle}>How strong?</Text>
+        <View style={st.intensityRow}>
+          {INTENSITIES.map((i) => (
+            <TouchableOpacity key={i} style={[st.intensityBtn, intensity >= i && st.intensityActive]} onPress={() => setIntensity(i)} activeOpacity={0.8}>
+              <Text style={[st.intensityText, intensity >= i && { color: Colors.textInverse }]}>{i}</Text>
             </TouchableOpacity>
           ))}
         </View>
-
-        <Text style={styles.sectionLabel}>WHAT TRIGGERED IT?</Text>
-        <View style={styles.chipGrid}>
-          {CRAVING_TRIGGERS.map(({ trigger: t }) => (
-            <TouchableOpacity
-              key={t}
-              style={[styles.chip, trigger === t && styles.chipActive]}
-              onPress={() => setTrigger(t)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={TRIGGER_ICONS[t]} size={18} color={trigger === t ? Colors.teal : Colors.textMuted} />
-              <Text style={[styles.chipText, trigger === t && styles.chipTextActive]}>{t}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={st.intensityLabel}>
+          <Text style={st.rangeText}>Mild</Text>
+          <Text style={[st.levelText, { color: intensity <= 2 ? Colors.mint : intensity <= 3 ? Colors.amber : Colors.danger }]}>
+            {intensity <= 2 ? 'Manageable' : intensity <= 3 ? 'Moderate' : 'Intense'}
+          </Text>
+          <Text style={st.rangeText}>Extreme</Text>
         </View>
 
-        {suggestion ? (
-          <View style={styles.tipCard}>
-            <Ionicons name="bulb-outline" size={20} color={Colors.amber} />
-            <Text style={styles.tipText}>{suggestion}</Text>
+        {/* Trigger */}
+        <Text style={st.sectionTitle}>What triggered it?</Text>
+        <View style={st.chipWrap}>
+          {CRAVING_TRIGGERS.map(({ trigger: t, icon }) => {
+            const active = trigger === t;
+            return (
+              <TouchableOpacity key={t} style={[st.chip, active && st.chipActive]} onPress={() => setTrigger(t)} activeOpacity={0.8}>
+                <Ionicons name={icon as any} size={16} color={active ? Colors.textInverse : Colors.textMuted} />
+                <Text style={[st.chipText, active && { color: Colors.textInverse }]}>{t}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Trigger-specific suggestion */}
+        {triggerData && !action && (
+          <View style={st.suggestionCard}>
+            <Ionicons name="bulb" size={18} color={Colors.amber} />
+            <View style={{ flex: 1 }}>
+              <Text style={st.suggestionTitle}>Try this instead</Text>
+              <Text style={st.suggestionText}>{triggerData.suggestion}</Text>
+            </View>
           </View>
-        ) : null}
+        )}
 
-        <Text style={styles.sectionLabel}>WHAT DID YOU DO?</Text>
-        {CRAVING_ACTIONS.map(({ action: a }) => {
-          const active = action === a;
-          return (
-            <TouchableOpacity key={a} style={[styles.actionRow, active && styles.actionRowActive]} onPress={() => setAction(a)} activeOpacity={0.7}>
-              <View style={[styles.actionIconWrap, active && styles.actionIconWrapActive]}>
-                <Ionicons name={ACTION_ICONS[a]} size={20} color={active ? Colors.white : Colors.textMuted} />
-              </View>
-              <Text style={[styles.actionText, active && { color: Colors.teal, fontWeight: '600' }]}>{a}</Text>
-              {active && <Ionicons name="checkmark" size={20} color={Colors.teal} />}
-            </TouchableOpacity>
-          );
-        })}
+        {/* Action */}
+        <Text style={st.sectionTitle}>What did you do?</Text>
+        <View style={st.chipWrap}>
+          {CRAVING_ACTIONS.map(({ action: a, icon }) => {
+            const active = action === a;
+            return (
+              <TouchableOpacity key={a} style={[st.chip, active && st.chipActive]} onPress={() => setAction(a)} activeOpacity={0.8}>
+                <Ionicons name={icon as any} size={16} color={active ? Colors.textInverse : Colors.textMuted} />
+                <Text style={[st.chipText, active && { color: Colors.textInverse }]}>{a}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Notes (optional)"
-          placeholderTextColor={Colors.textMuted}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
-      </ScrollView>
+        {/* Contextual feedback */}
+        {trigger && action && action !== 'Vaped' && (
+          <View style={st.feedbackCard}>
+            <Ionicons name="sparkles" size={20} color={Colors.mint} />
+            <View style={{ flex: 1 }}>
+              <Text style={st.feedbackTitle}>Nice work!</Text>
+              <Text style={st.feedbackSub}>Every craving resisted weakens the habit. You're building real strength.</Text>
+            </View>
+          </View>
+        )}
+        {trigger && action === 'Vaped' && (
+          <View style={[st.feedbackCard, { backgroundColor: Colors.warningDim }]}>
+            <Ionicons name="heart" size={20} color={Colors.amber} />
+            <View style={{ flex: 1 }}>
+              <Text style={[st.feedbackTitle, { color: Colors.amber }]}>That's okay</Text>
+              <Text style={st.feedbackSub}>Slipping doesn't erase your progress. Logging it is a sign of strength. Tomorrow is a fresh start.</Text>
+            </View>
+          </View>
+        )}
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.85}>
-          <Ionicons name="flash" size={20} color={Colors.white} />
-          <Text style={styles.saveButtonText}>Log Craving</Text>
+        <TouchableOpacity style={[st.saveBtn, !complete && st.saveBtnDisabled, complete && Shadows.glow]} onPress={handleSave} disabled={!complete || saved} activeOpacity={0.85}>
+          <Text style={st.saveText}>{saved ? 'Saved!' : 'Save Craving'}</Text>
         </TouchableOpacity>
-      </View>
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: Spacing.xl, borderBottomWidth: 1, borderColor: Colors.divider,
-  },
+const st = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
   title: { ...Type.h3 },
-  body: { flex: 1, padding: Spacing['2xl'] },
-  sectionLabel: { ...Type.caption, textTransform: 'uppercase', letterSpacing: 1.5, marginTop: Spacing['3xl'], marginBottom: Spacing.md },
-  intensityText: { fontSize: 36, fontWeight: '800', textAlign: 'center', marginBottom: Spacing.lg },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: Spacing.lg },
-  intensityDot: {},
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
-    borderRadius: Radius.full, backgroundColor: Colors.bgCard,
-    borderWidth: 1.5, borderColor: Colors.border,
-  },
-  chipActive: { borderColor: Colors.teal, backgroundColor: Colors.tealMuted },
-  chipText: { ...Type.caption, color: Colors.textSecondary },
-  chipTextActive: { color: Colors.teal, fontWeight: '600' },
-  tipCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    padding: Spacing.lg, backgroundColor: Colors.warningLight,
-    borderRadius: Radius.lg, marginTop: Spacing.lg,
-  },
-  tipText: { ...Type.bodySm, color: Colors.text, flex: 1 },
-  actionRow: {
-    flexDirection: 'row', alignItems: 'center',
-    padding: Spacing.md, backgroundColor: Colors.bgCard,
-    borderRadius: Radius.lg, marginBottom: Spacing.sm,
-    borderWidth: 1.5, borderColor: Colors.border,
-  },
-  actionRowActive: { borderColor: Colors.teal, backgroundColor: Colors.tealMuted },
-  actionIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.bgInput, justifyContent: 'center', alignItems: 'center',
-    marginRight: Spacing.md,
-  },
-  actionIconWrapActive: { backgroundColor: Colors.teal },
-  actionText: { ...Type.bodyMedium, flex: 1 },
-  input: {
-    backgroundColor: Colors.bgInput, borderRadius: Radius.lg,
-    padding: Spacing.lg, marginTop: Spacing['2xl'],
-    fontSize: 15, color: Colors.text, minHeight: 60, textAlignVertical: 'top',
-  },
-  footer: { padding: Spacing.xl },
-  saveButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.teal, paddingVertical: 16, borderRadius: Radius.xl, ...Shadows.md,
-  },
-  saveButtonText: { fontSize: 17, fontWeight: '700', color: Colors.white },
+  scroll: { flex: 1 },
+  body: { padding: Spacing['2xl'], paddingBottom: 100 },
+  sectionTitle: { ...Type.label, marginBottom: Spacing.md, marginTop: Spacing.xl },
+  intensityRow: { flexDirection: 'row', gap: Spacing.sm },
+  intensityBtn: { flex: 1, height: 48, borderRadius: Radius.md, backgroundColor: Colors.bgCard, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  intensityActive: { backgroundColor: Colors.mint, borderColor: Colors.mint },
+  intensityText: { fontSize: 16, fontWeight: '700', color: Colors.textMuted },
+  intensityLabel: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.sm },
+  rangeText: { ...Type.caption },
+  levelText: { fontSize: 13, fontWeight: '700' },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radius.full, backgroundColor: Colors.bgCard, borderWidth: 1, borderColor: Colors.border },
+  chipActive: { backgroundColor: Colors.mint, borderColor: Colors.mint },
+  chipText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  suggestionCard: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, backgroundColor: Colors.warningDim, borderRadius: Radius.xl, padding: Spacing.lg, marginTop: Spacing.lg },
+  suggestionTitle: { ...Type.label, color: Colors.amber, marginBottom: 2 },
+  suggestionText: { ...Type.bodySm },
+  feedbackCard: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md, backgroundColor: Colors.mintMuted, borderRadius: Radius.xl, padding: Spacing.lg, marginTop: Spacing.xl },
+  feedbackTitle: { ...Type.label, color: Colors.mint, marginBottom: 2 },
+  feedbackSub: { ...Type.bodySm, lineHeight: 20 },
+  saveBtn: { backgroundColor: Colors.mint, paddingVertical: 16, borderRadius: Radius.xl, alignItems: 'center', marginTop: Spacing['3xl'] },
+  saveBtnDisabled: { backgroundColor: Colors.bgElevated },
+  saveText: { fontSize: 16, fontWeight: '700', color: Colors.textInverse },
 });

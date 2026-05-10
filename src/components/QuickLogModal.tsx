@@ -1,146 +1,93 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadows, Type } from '../constants/theme';
-import { MOOD_EMOJIS } from '../constants/data';
 import { upsertTodayLog } from '../services/storage';
 
-interface Props {
-  currentCount: number;
-  goal: number;
-  onDismiss: () => void;
-}
+const MOODS = [
+  { label: 'Awful', value: 1, icon: 'sad' as const, color: Colors.danger },
+  { label: 'Rough', value: 2, icon: 'sad-outline' as const, color: Colors.coral },
+  { label: 'OK', value: 3, icon: 'remove-circle-outline' as const, color: Colors.amber },
+  { label: 'Good', value: 4, icon: 'happy-outline' as const, color: Colors.sky },
+  { label: 'Great', value: 5, icon: 'happy' as const, color: Colors.mint },
+];
+
+interface Props { currentCount: number; goal: number; onDismiss: () => void; }
 
 export default function QuickLogModal({ currentCount, goal, onDismiss }: Props) {
-  const [puffsToAdd, setPuffsToAdd] = useState(1);
-  const [mood, setMood] = useState(3);
-  const [notes, setNotes] = useState('');
+  const [mood, setMood] = useState<typeof MOODS[number] | null>(null);
+  const [saved, setSaved] = useState(false);
 
-  const handleLog = async () => {
-    await upsertTodayLog({ puffCount: puffsToAdd, mood, notes, dailyGoal: goal });
-    onDismiss();
+  const handleSave = async () => {
+    if (!mood) return;
+    await upsertTodayLog({ puffCount: 0, mood: mood.value });
+    setSaved(true);
+    setTimeout(onDismiss, 400);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onDismiss} hitSlop={12}>
-          <Ionicons name="close" size={24} color={Colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Log Puffs</Text>
-        <View style={{ width: 24 }} />
+    <SafeAreaView style={st.safe}>
+      <View style={st.header}>
+        <TouchableOpacity onPress={onDismiss}><Ionicons name="close" size={28} color={Colors.textMuted} /></TouchableOpacity>
+        <Text style={st.title}>How are you feeling?</Text>
+        <View style={{ width: 28 }} />
       </View>
 
-      <View style={styles.body}>
-        <Text style={styles.label}>Today so far</Text>
-        <Text style={styles.currentCount}>{currentCount}</Text>
-        <View style={styles.goalBadge}>
-          <Ionicons name="flag-outline" size={14} color={Colors.teal} />
-          <Text style={styles.goalText}>Goal: {goal} puffs</Text>
+      <View style={st.body}>
+        <Text style={st.sub}>Your mood helps track how quitting affects you</Text>
+
+        <View style={st.todaySummary}>
+          <Text style={st.summaryText}>{currentCount} puffs today</Text>
+          <Text style={st.summaryGoal}>Goal: {goal}</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Puffs to add</Text>
-          <View style={styles.stepperRow}>
-            <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(Math.max(1, puffsToAdd - 1))} activeOpacity={0.7}>
-              <Ionicons name="remove" size={24} color={Colors.teal} />
-            </TouchableOpacity>
-            <Text style={styles.stepperValue}>{puffsToAdd}</Text>
-            <TouchableOpacity style={styles.stepperBtn} onPress={() => setPuffsToAdd(puffsToAdd + 1)} activeOpacity={0.7}>
-              <Ionicons name="add" size={24} color={Colors.teal} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.quickRow}>
-            {[1, 5, 10, 20].map((n) => (
-              <TouchableOpacity
-                key={n}
-                style={[styles.quickChip, puffsToAdd === n && styles.quickChipActive]}
-                onPress={() => setPuffsToAdd(n)}
-              >
-                <Text style={[styles.quickChipText, puffsToAdd === n && styles.quickChipTextActive]}>+{n}</Text>
+        <View style={st.moodGrid}>
+          {MOODS.map((m) => {
+            const active = mood?.value === m.value;
+            return (
+              <TouchableOpacity key={m.value} style={[st.moodBtn, active && { backgroundColor: m.color + '22', borderColor: m.color }]} onPress={() => setMood(m)} activeOpacity={0.8}>
+                <Ionicons name={m.icon} size={32} color={active ? m.color : Colors.textDim} />
+                <Text style={[st.moodLabel, active && { color: m.color }]}>{m.label}</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            );
+          })}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>How are you feeling?</Text>
-          <View style={styles.moodRow}>
-            {MOOD_EMOJIS.map((emoji, i) => (
-              <TouchableOpacity key={i} onPress={() => setMood(i + 1)} activeOpacity={0.7}>
-                <View style={[styles.moodCircle, mood === i + 1 && styles.moodCircleActive]}>
-                  <Text style={{ fontSize: mood === i + 1 ? 32 : 24 }}>{emoji}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+        {mood && (
+          <View style={st.selectedRow}>
+            <Ionicons name={mood.icon} size={20} color={mood.color} />
+            <Text style={[st.selectedText, { color: mood.color }]}>Feeling {mood.label.toLowerCase()}</Text>
           </View>
-        </View>
+        )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Notes (optional)"
-          placeholderTextColor={Colors.textMuted}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
-      </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.logButton} onPress={handleLog} activeOpacity={0.85}>
-          <Ionicons name="add-circle" size={20} color={Colors.white} />
-          <Text style={styles.logButtonText}>Log {puffsToAdd} Puff{puffsToAdd === 1 ? '' : 's'}</Text>
+        <TouchableOpacity
+          style={[st.saveBtn, !mood && st.saveBtnDisabled, mood && Shadows.glow]}
+          onPress={handleSave}
+          disabled={!mood || saved}
+          activeOpacity={0.85}
+        >
+          <Text style={st.saveText}>{saved ? 'Saved!' : 'Save Mood'}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: Spacing.xl, borderBottomWidth: 1, borderColor: Colors.divider,
-  },
+const st = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.bg },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
   title: { ...Type.h3 },
   body: { flex: 1, padding: Spacing['2xl'], alignItems: 'center' },
-  label: { ...Type.caption, textTransform: 'uppercase', letterSpacing: 1 },
-  currentCount: { ...Type.numberLg, marginTop: Spacing.xs },
-  goalBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-    backgroundColor: Colors.tealMuted, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs,
-    borderRadius: Radius.full, marginTop: Spacing.sm,
-  },
-  goalText: { ...Type.caption, color: Colors.teal, fontWeight: '600' },
-  section: { width: '100%', marginTop: Spacing['3xl'], alignItems: 'center' },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing['3xl'], marginTop: Spacing.md },
-  stepperBtn: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: Colors.tealMuted, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: Colors.tealLight,
-  },
-  stepperValue: { ...Type.number, minWidth: 70, textAlign: 'center' },
-  quickRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg },
-  quickChip: {
-    paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xl,
-    borderRadius: Radius.full, backgroundColor: Colors.bgInput,
-  },
-  quickChipActive: { backgroundColor: Colors.teal },
-  quickChipText: { ...Type.label, color: Colors.textSecondary },
-  quickChipTextActive: { color: Colors.white },
-  moodRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.md },
-  moodCircle: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
-  moodCircleActive: { backgroundColor: Colors.tealMuted, ...Shadows.sm },
-  input: {
-    width: '100%', backgroundColor: Colors.bgInput,
-    borderRadius: Radius.lg, padding: Spacing.lg, marginTop: Spacing['2xl'],
-    fontSize: 15, color: Colors.text, minHeight: 60, textAlignVertical: 'top',
-  },
-  footer: { padding: Spacing.xl },
-  logButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.teal, paddingVertical: 16, borderRadius: Radius.xl, ...Shadows.md,
-  },
-  logButtonText: { fontSize: 17, fontWeight: '700', color: Colors.white },
+  sub: { ...Type.bodySm, textAlign: 'center', marginBottom: Spacing['2xl'] },
+  todaySummary: { flexDirection: 'row', gap: Spacing.xl, backgroundColor: Colors.bgCard, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, borderRadius: Radius.full, marginBottom: Spacing['3xl'] },
+  summaryText: { ...Type.bodyMedium },
+  summaryGoal: { ...Type.bodySm },
+  moodGrid: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing['2xl'] },
+  moodBtn: { alignItems: 'center', gap: Spacing.sm, paddingVertical: Spacing.lg, paddingHorizontal: Spacing.md, borderRadius: Radius.xl, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.bgCard, flex: 1 },
+  moodLabel: { ...Type.caption, fontWeight: '600' },
+  selectedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xl },
+  selectedText: { fontSize: 16, fontWeight: '600' },
+  saveBtn: { backgroundColor: Colors.mint, width: '100%', paddingVertical: 16, borderRadius: Radius.xl, alignItems: 'center' },
+  saveBtnDisabled: { backgroundColor: Colors.bgElevated },
+  saveText: { fontSize: 16, fontWeight: '700', color: Colors.textInverse },
 });

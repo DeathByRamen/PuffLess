@@ -1,45 +1,50 @@
 import { Platform } from 'react-native';
 
 export const Colors = {
-  // Primary
-  teal: '#0d9488',
-  tealDark: '#0f766e',
-  tealLight: '#ccfbf1',
-  tealMuted: 'rgba(13, 148, 136, 0.08)',
-  tealGlow: 'rgba(13, 148, 136, 0.15)',
+  // Mint accent
+  mint: '#4ade80',
+  mintDark: '#22c55e',
+  mintLight: '#bbf7d0',
+  mintMuted: 'rgba(74, 222, 128, 0.10)',
+  mintGlow: 'rgba(74, 222, 128, 0.18)',
+  mintSubtle: 'rgba(74, 222, 128, 0.06)',
 
-  // Accent
-  coral: '#f97066',
-  amber: '#f59e0b',
-  emerald: '#10b981',
-  violet: '#8b5cf6',
-  sky: '#0ea5e9',
+  // Charcoal backgrounds (darkest to lightest)
+  bg: '#0f1117',
+  bgCard: '#1a1d27',
+  bgElevated: '#222636',
+  bgInput: '#262a36',
+  bgHover: '#2d3243',
 
   // Semantic
-  success: '#10b981',
-  successLight: '#ecfdf5',
-  warning: '#f59e0b',
-  warningLight: '#fffbeb',
-  danger: '#ef4444',
-  dangerLight: '#fef2f2',
+  success: '#4ade80',
+  successDim: 'rgba(74, 222, 128, 0.15)',
+  warning: '#fbbf24',
+  warningDim: 'rgba(251, 191, 36, 0.15)',
+  danger: '#f87171',
+  dangerDim: 'rgba(248, 113, 113, 0.15)',
 
-  // Neutrals
+  // Extra accents
+  coral: '#fb7185',
+  amber: '#fbbf24',
+  violet: '#a78bfa',
+  sky: '#38bdf8',
+
+  // Text
   white: '#ffffff',
-  bg: '#f8fafc',
-  bgCard: '#ffffff',
-  bgElevated: '#ffffff',
-  bgInput: '#f1f5f9',
+  text: '#f1f5f9',
+  textSecondary: '#94a3b8',
+  textMuted: '#64748b',
+  textDim: '#475569',
+  textInverse: '#0f1117',
 
-  text: '#0f172a',
-  textSecondary: '#64748b',
-  textMuted: '#94a3b8',
-  textInverse: '#ffffff',
+  // Borders
+  border: '#2d3243',
+  borderLight: '#222636',
+  divider: '#1e2233',
 
-  border: '#e2e8f0',
-  borderLight: '#f1f5f9',
-  divider: '#f1f5f9',
-
-  overlay: 'rgba(15, 23, 42, 0.4)',
+  // Overlay
+  overlay: 'rgba(0, 0, 0, 0.6)',
 };
 
 export const Spacing = {
@@ -65,18 +70,23 @@ export const Radius = {
 
 export const Shadows = {
   sm: Platform.select({
-    ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 },
-    android: { elevation: 1 },
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+    android: { elevation: 2 },
     default: {},
   }) as object,
   md: Platform.select({
-    ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-    android: { elevation: 3 },
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+    android: { elevation: 4 },
     default: {},
   }) as object,
   lg: Platform.select({
-    ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16 },
-    android: { elevation: 6 },
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16 },
+    android: { elevation: 8 },
+    default: {},
+  }) as object,
+  glow: Platform.select({
+    ios: { shadowColor: '#4ade80', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 12 },
+    android: { elevation: 4 },
     default: {},
   }) as object,
 };

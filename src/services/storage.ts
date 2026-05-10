@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile, DailyLog, Craving, NRTEntry, QuitPlan } from '../models/types';
+import { getLocalDateString } from '../utils/date';
 
 const KEYS = {
   PROFILE: 'puffless_profile',
@@ -46,14 +47,24 @@ export async function saveDailyLogs(logs: DailyLog[]): Promise<void> {
   await setJSON(KEYS.DAILY_LOGS, logs);
 }
 
-export async function upsertTodayLog(update: Partial<DailyLog> & { puffCount: number }): Promise<DailyLog> {
+export type UpsertTodayLogUpdate = Partial<DailyLog> & (
+  | { puffCount: number; setAbsolute?: false }
+  | { puffCount: number; setAbsolute: true }
+);
+
+export async function upsertTodayLog(update: UpsertTodayLogUpdate): Promise<DailyLog> {
   const logs = await getDailyLogs();
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const existingIndex = logs.findIndex((l) => l.date === today);
 
   if (existingIndex >= 0) {
     const existing = logs[existingIndex];
-    existing.puffCount += update.puffCount;
+    if (update.setAbsolute) {
+      existing.puffCount = Math.max(0, Math.round(update.puffCount));
+    } else {
+      existing.puffCount = Math.max(0, existing.puffCount + update.puffCount);
+    }
+    if (update.dailyGoal !== undefined) existing.dailyGoal = update.dailyGoal;
     if (update.mood !== undefined) existing.mood = update.mood;
     if (update.notes) existing.notes = update.notes;
     if (update.nicotineStrength !== undefined) existing.nicotineStrength = update.nicotineStrength;
@@ -63,12 +74,13 @@ export async function upsertTodayLog(update: Partial<DailyLog> & { puffCount: nu
     return existing;
   }
 
+  const count = update.setAbsolute ? Math.max(0, Math.round(update.puffCount)) : update.puffCount;
   const newLog: DailyLog = {
     date: today,
-    puffCount: update.puffCount,
+    puffCount: Math.max(0, count),
     nicotineStrength: update.nicotineStrength ?? 0,
     dailyGoal: update.dailyGoal ?? 0,
-    goalMet: (update.puffCount) <= (update.dailyGoal ?? 0),
+    goalMet: Math.max(0, count) <= (update.dailyGoal ?? 0),
     mood: update.mood ?? 3,
     notes: update.notes ?? '',
   };
@@ -112,4 +124,23 @@ export async function setOnboarded(): Promise<void> {
 // Reset
 export async function resetAllData(): Promise<void> {
   await AsyncStorage.multiRemove(Object.values(KEYS));
+}
+
+// Backup / restore: full state for export/import
+export const STORAGE_KEYS = { ...KEYS };
+
+export async function getAllData(): Promise<Record<string, string>> {
+  const keys = Object.values(KEYS);
+  const pairs = await AsyncStorage.multiGet(keys);
+  const out: Record<string, string> = {};
+  for (const [k, v] of pairs) {
+    if (v != null) out[k] = v;
+  }
+  return out;
+}
+
+export async function restoreAllData(data: Record<string, string>): Promise<void> {
+  const entries = Object.entries(data).filter(([, v]) => v != null) as [string, string][];
+  if (entries.length === 0) return;
+  await AsyncStorage.multiSet(entries);
 }

@@ -41,15 +41,16 @@ export function buildPlan(
   startingPuffs: number,
   startingNicotine: number,
   targetDate: string,
+  startDate?: string,
 ): QuitPlan {
-  const now = new Date();
+  const start = startDate ? new Date(startDate) : new Date();
   const target = new Date(targetDate);
-  const days = Math.max(1, Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const days = Math.max(1, Math.round((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
   const weeks = Math.max(1, Math.floor(days / 7));
 
   return {
     activeMethods: methods,
-    startDate: now.toISOString(),
+    startDate: start.toISOString(),
     targetEndDate: targetDate,
     weeklyTargets: generateWeeklyTargets(startingPuffs, weeks),
     nicotineStepDown: generateNicotineStepDown(startingNicotine, weeks),
@@ -68,6 +69,16 @@ export function getTodaysGoal(plan: QuitPlan): number {
   return plan.weeklyTargets[Math.min(week, plan.weeklyTargets.length - 1)];
 }
 
+/** Get the daily puff goal for a specific date based on the plan's step-down schedule. */
+export function getGoalForDate(plan: QuitPlan, dateStr: string): number {
+  if (plan.weeklyTargets.length === 0) return 0;
+  const start = new Date(plan.startDate);
+  const date = new Date(dateStr);
+  const days = Math.round((date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  const week = Math.max(0, Math.floor(days / 7));
+  return plan.weeklyTargets[Math.min(week, plan.weeklyTargets.length - 1)];
+}
+
 export function getPlanProgress(plan: QuitPlan): number {
   const totalWeeks = Math.max(1, plan.weeklyTargets.length - 1);
   return Math.min(1, getCurrentWeek(plan) / totalWeeks);
@@ -79,5 +90,6 @@ export function getDaysRemaining(plan: QuitPlan): number {
 }
 
 export function moneySaved(puffsAvoided: number, costPerPuff: number): number {
-  return puffsAvoided * costPerPuff;
+  const v = Math.max(0, puffsAvoided) * (costPerPuff || 0);
+  return Number.isFinite(v) ? v : 0;
 }
